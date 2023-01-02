@@ -1,7 +1,17 @@
-from flask import Flask, request, send_file, send_from_directory
+from flask import Flask, request, send_file, send_from_directory, Response
 from PIL import Image
+import os
+from io import BytesIO
 
-app = Flask(__name__)
+
+# Getting Directories
+parent_folder = os.path.dirname(os.path.abspath(__file__))
+directory = os.path.abspath(
+    os.path.join(parent_folder, "..", "image_conversion_frontend", "build")
+)
+
+# Setting flask app
+app = Flask(__name__, static_folder=directory, static_url_path="")
 
 
 @app.route("/convert", methods=["POST"])
@@ -12,7 +22,7 @@ def convert_image_format():
 
     # Get the input image from the request
     input_image = request.files["input_image"]
-    input_image.seek(0)
+    # input_image.seek(0)
 
     # Open the input image
     image = Image.open(input_image)
@@ -32,19 +42,18 @@ def convert_image_format():
         "Content-Type": f"image/{output_format}",
     }
 
-    # Return the output image as a response
-    return send_file(output_image, headers=response_headers, as_attachment=True)
+    # Create a response object with the desired headers
+    response = Response(output_image, headers=response_headers)
+
+    # Return the response
+    return response
 
 
 @app.route("/")
 def index():
-    # Set the directory to host
-    directory = "/path/to/directory"
-    # Set the file to serve as the default index
-    index = "index.html"
     # Return the directory contents as a response
-    return send_from_directory(directory, index)
+    return send_from_directory(directory, "index.html")
 
 
 if __name__ == "__main__":
-    app.run()
+    app.run(debug=True)

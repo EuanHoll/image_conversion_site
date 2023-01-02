@@ -1,5 +1,5 @@
 import React from "react";
-import { Form, Select, Upload, Button } from "antd";
+import { Form, Select, Upload, Button, message } from "antd";
 import "./App.css";
 import { InboxOutlined } from "@ant-design/icons";
 
@@ -11,16 +11,30 @@ async function convertFile(file, inputFormat, outputFormat) {
     const formData = new FormData();
     formData.append("input_format", inputFormat);
     formData.append("output_format", outputFormat);
-    formData.append("input_image", file);
+
+    // Create a Blob object from the file
+    const fileBlob = new Blob([file], { type: file.type });
+    formData.append("input_image", fileBlob, file.name);
 
     // Send a POST request to the /convert endpoint with the FormData object as the request body
     const response = await fetch("/convert", {
       method: "POST",
       body: formData,
+      credentials: "same-origin", // include cookies in the request
     });
 
-    // Return the output image as a blob
-    return await response.blob();
+    // Check if the response is a file (blob)
+    if (!response.ok) {
+      message.error("Error: Failed to convert image");
+      throw new Error("Error: Failed to convert image");
+    }
+
+    // Download the output image as a blob
+    const blob = await response.blob();
+    const link = document.createElement("a");
+    link.href = window.URL.createObjectURL(blob);
+    link.download = "converted." + outputFormat; // Set the desired name for the downloaded file
+    link.click();
   } catch (error) {
     console.error(error);
   }
@@ -29,38 +43,34 @@ async function convertFile(file, inputFormat, outputFormat) {
 class App extends React.Component {
   state = {
     file: null,
-    inputFormat: "",
+    inputFormat: "unused",
     outputFormat: "",
   };
 
   handleFileChange = (event) => {
-    this.setState({ file: event.target.files[0] });
+    this.setState({ file: event.file.originFileObj });
     // Set the input format based on the file extension
-    this.setState({ inputFormat: event.target.files[0].name.split(".").pop() });
+    this.setState({ inputFormat: event.file.name.split(".").pop() });
   };
 
   handleSubmit = (event) => {
-    event.preventDefault();
-
     // Convert the file using the /convert endpoint
     convertFile(
       this.state.file,
       this.state.inputFormat,
       this.state.outputFormat
-    ).then((outputImage) => {
-      // Do something with the output image
-      console.log(outputImage);
-    });
+    );
   };
 
   render() {
+    document.title = "Convert Image";
     return (
       <div>
-        <div class="top-center">
+        <div className="top-center">
           <h1>Image Converter</h1>
         </div>
-        <div class="center">
-          <Form onSubmit={this.handleSubmit}>
+        <div className="center">
+          <Form onFinish={this.handleSubmit}>
             <Form.Item label="Output format">
               <Select
                 value={this.state.outputFormat}
@@ -71,6 +81,8 @@ class App extends React.Component {
                 <Option value="jpg">JPG</Option>
                 <Option value="ico">ICO</Option>
                 <Option value="bmp">BMP</Option>
+                <Option value="tiff">TIFF</Option>
+                <Option value="tga">TGA</Option>
               </Select>
             </Form.Item>
             <Form.Item label="File">
