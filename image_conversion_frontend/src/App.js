@@ -69,7 +69,7 @@ class App extends React.Component {
                 style={{ width: "120px" }}>
                 <Option value="png">PNG</Option>
                 <Option value="jpg">JPG</Option>
-                <Option value="gif">ICO</Option>
+                <Option value="ico">ICO</Option>
                 <Option value="bmp">BMP</Option>
               </Select>
             </Form.Item>
